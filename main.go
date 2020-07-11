@@ -66,9 +66,10 @@ func markdownToHTML(input []byte) []byte {
 func checkResponseType(url string) string {
 	if url == "/" {
 		return INDEXPAGE
-	} else {
+	} else if url[len(url)-3:] == ".md" {
 		return OTHERPAGE
 	}
+	return ""
 }
 
 func fileIsIndex(file PagePointer) bool {
@@ -127,11 +128,14 @@ func otherpage(w http.ResponseWriter, url string, r *http.Request) {
 
 func serve(w http.ResponseWriter, r *http.Request) {
 	responseType := checkResponseType(r.URL.Path)
+	h := http.FileServer(http.Dir("."))
 	if responseType == INDEXPAGE {
 		indexPage(w, r)
-	}
-	if responseType == OTHERPAGE {
+	} else if responseType == OTHERPAGE {
 		otherpage(w, r.URL.Path, r)
+	} else {
+		h.ServeHTTP(w, r)
+		return
 	}
 }
 

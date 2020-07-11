@@ -26,6 +26,11 @@ func header() string {
 					margin: auto;
 					width: 75%;
 				}
+
+				img {
+					width: 60%;
+					margin: auto;
+				}
 		</style>
     </head>
     <body>
