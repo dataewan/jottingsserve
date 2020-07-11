@@ -11,6 +11,22 @@ func header() string {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width">
+		<style>
+				* {
+					box-sizing: border-box;
+					text-rendering: optimizeLegibility;
+					-webkit-font-smoothing: antialiased;
+					-moz-osx-font-smoothing: grayscale;
+					font-kerning: auto;
+					font-family: sans-serif
+				}
+
+				body {
+					-webkit-text-size-adjust: 100%;
+					margin: auto;
+					width: 75%;
+				}
+		</style>
     </head>
     <body>
 	`
