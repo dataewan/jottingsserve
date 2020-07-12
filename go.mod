@@ -1,4 +1,4 @@
-module github.com/dataewan/jottingserve
+module github.com/dataewan/jottingsserve
 
 go 1.14
 
