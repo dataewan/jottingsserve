@@ -4,12 +4,25 @@ import (
 	"github.com/gomarkdown/markdown"
 	//"github.com/gomarkdown/markdown/html"
 	//"github.com/gomarkdown/markdown/parser"
+	"flag"
+	"github.com/pkg/browser"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 )
+
+func main() {
+	port := flag.String("port", "8080", "Port to serve pages on")
+	flag.Parse()
+
+	portstring := ":" + *port
+
+	go browser.OpenURL("http://localhost" + portstring)
+	http.HandleFunc("/", serve)
+	log.Fatal(http.ListenAndServe(portstring, nil))
+}
 
 const INDEXPAGE = "INDEX"
 const OTHERPAGE = "OTHER"
@@ -137,9 +150,4 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		h.ServeHTTP(w, r)
 		return
 	}
-}
-
-func main() {
-	http.HandleFunc("/", serve)
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }
