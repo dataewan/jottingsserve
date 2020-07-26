@@ -12,7 +12,7 @@ go install github.com/dataewan/jottingsserve
 ## usage
 
 ```
-jottingsspool
+jottingsserve
 ```
 
 Accessing `localhost:8080` will then display your rendered markdown pages.
