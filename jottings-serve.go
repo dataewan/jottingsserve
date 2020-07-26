@@ -1,10 +1,8 @@
 package main
 
 import (
-	"github.com/gomarkdown/markdown"
-	//"github.com/gomarkdown/markdown/html"
-	//"github.com/gomarkdown/markdown/parser"
 	"flag"
+	"github.com/gomarkdown/markdown"
 	"github.com/pkg/browser"
 	"html/template"
 	"io/ioutil"
@@ -13,19 +11,25 @@ import (
 	"path/filepath"
 )
 
+var Directory = "."
+
+const INDEXPAGE = "INDEX"
+const OTHERPAGE = "OTHER"
+
 func main() {
 	port := flag.String("port", "8080", "Port to serve pages on")
 	flag.Parse()
 
 	portstring := ":" + *port
 
+	if flag.NArg() == 1 {
+		Directory = flag.Arg(0)
+	}
+
 	go browser.OpenURL("http://localhost" + portstring)
 	http.HandleFunc("/", serve)
 	log.Fatal(http.ListenAndServe(portstring, nil))
 }
-
-const INDEXPAGE = "INDEX"
-const OTHERPAGE = "OTHER"
 
 type PagePointer struct {
 	Path     string
@@ -48,7 +52,7 @@ func justFilename(path string) string {
 }
 
 func getFiles() Pages {
-	matches, err := filepath.Glob("./*md")
+	matches, err := filepath.Glob(Directory + "/*md")
 	if err != nil {
 		log.Print(err.Error())
 	}
@@ -141,7 +145,7 @@ func otherpage(w http.ResponseWriter, url string, r *http.Request) {
 
 func serve(w http.ResponseWriter, r *http.Request) {
 	responseType := checkResponseType(r.URL.Path)
-	h := http.FileServer(http.Dir("."))
+	h := http.FileServer(http.Dir(Directory))
 	if responseType == INDEXPAGE {
 		indexPage(w, r)
 	} else if responseType == OTHERPAGE {
