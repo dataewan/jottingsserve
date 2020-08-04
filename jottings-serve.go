@@ -1,9 +1,13 @@
+//go:generate statik -src=./public -include=*.jpg,*.txt,*.html,*.css,*.js
+
 package main
 
 import (
 	"flag"
+	_ "github.com/dataewan/jottingsserve/statik"
 	"github.com/gomarkdown/markdown"
 	"github.com/pkg/browser"
+	"github.com/rakyll/statik/fs"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -26,7 +30,13 @@ func main() {
 		Directory = flag.Arg(0)
 	}
 
+	statikFS, err := fs.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go browser.OpenURL("http://localhost" + portstring)
+	http.Handle("/public/", http.StripPrefix("/public/", http.FileServer(statikFS)))
 	http.HandleFunc("/", serve)
 	log.Fatal(http.ListenAndServe(portstring, nil))
 }
