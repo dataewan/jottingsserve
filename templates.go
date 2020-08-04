@@ -11,27 +11,13 @@ func header() string {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width">
-		<style>
-				* {
-					box-sizing: border-box;
-					text-rendering: optimizeLegibility;
-					-webkit-font-smoothing: antialiased;
-					-moz-osx-font-smoothing: grayscale;
-					font-kerning: auto;
-					font-family: sans-serif
-				}
-
-				body {
-					-webkit-text-size-adjust: 100%;
-					margin: auto;
-					width: 75%;
-				}
-
-				img {
-					width: 60%;
-					margin: auto;
-				}
-		</style>
+		<link rel="stylesheet" type="text/css" href="/public/jottings.css">
+		<link rel="stylesheet"
+			  href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/styles/foundation.min.css">
+		<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+		<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </head>
     <body>
 	`
