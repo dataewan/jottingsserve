@@ -32,7 +32,6 @@ func footer() string {
 
 func indexTemplate() *template.Template {
 	definition := `
-	<h1>Hiya</h1>
 	{{range .Pages}}
 	<ul>
 		<a href={{.Path}}>{{.Filename}}</a>
