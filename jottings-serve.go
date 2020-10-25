@@ -53,6 +53,7 @@ func main() {
 	}
 
 	mdfi := NewMarkdownIndex(Directory)
+	mdfi.ReadFiles()
 	s := HTTPServer{
 		Index: mdfi,
 	}
@@ -72,28 +73,28 @@ type MarkdownFileIndex struct {
 	Directory       string
 	ContentTemplate *template.Template
 	IndexTemplate   *template.Template
+	SearchIndex     BleveSeachIndex
 }
 
 func NewMarkdownIndex(dir string) MarkdownFileIndex {
 	files := make(map[string]MarkdownFile)
+	searchindex := GetIndex()
 	mdfi := MarkdownFileIndex{
 		Files:           files,
 		Directory:       dir,
 		ContentTemplate: contentTemplate(),
 		IndexTemplate:   indexTemplate(),
+		SearchIndex:     searchindex,
 	}
 
 	return mdfi
 }
 
-func (mdfi *MarkdownFileIndex) ReadFiles() bool {
+func (mdfi *MarkdownFileIndex) ReadFiles() {
 	matches, err := filepath.Glob(mdfi.Directory + "/*md")
 	if err != nil {
 		log.Print(err)
 	}
-
-	// Have any of the files been updated?
-	indexDirty := false
 
 	for _, path := range matches {
 		filename := justFilename(path)
@@ -101,21 +102,14 @@ func (mdfi *MarkdownFileIndex) ReadFiles() bool {
 		mdfile := ReadMarkdown(path, mdfi.ContentTemplate)
 		if exists {
 			if oldfile.Checksum != mdfile.Checksum {
-				indexDirty = true
+				mdfi.SearchIndex.Put(filename, mdfile)
 			}
 			mdfi.Files[filename] = mdfile
 		} else {
+			mdfi.SearchIndex.Put(filename, mdfile)
 			mdfi.Files[filename] = mdfile
-			indexDirty = true
 		}
 	}
-	return indexDirty
-}
-
-func (mdfi *MarkdownFileIndex) Update() {
-	indexDirty := mdfi.ReadFiles()
-	log.Printf("Do I need to refresh index? %v", indexDirty)
-
 }
 
 func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
@@ -230,11 +224,12 @@ func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
 }
 
 func (s *HTTPServer) Serve(w http.ResponseWriter, r *http.Request) {
-	s.Index.Update()
+	s.Index.ReadFiles()
 	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
 		file.ToHTML(w)
 	} else {
+		log.Print("This is the index page")
 		s.Index.ServeIndex(w)
 	}
 }
