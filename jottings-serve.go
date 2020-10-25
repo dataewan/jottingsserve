@@ -30,6 +30,9 @@ type FileIndex interface {
 
 type File interface {
 	ToHTML(http.ResponseWriter)
+	GetTitle() string
+	GetText() string
+	GetPath() string
 }
 
 var Directory = "."
@@ -133,7 +136,7 @@ func ReadMarkdown(path string, template *template.Template) MarkdownFile {
 	filename := justFilename(path)
 	checksum, _ := md5sum(path)
 	return MarkdownFile{
-		Path:     path,
+		FilePath: path,
 		Filename: filename,
 		Title:    filename,
 		Template: template,
@@ -158,7 +161,7 @@ func md5sum(filePath string) (string, error) {
 }
 
 type MarkdownFile struct {
-	Path     string
+	FilePath string
 	Filename string
 	Title    string
 	Template *template.Template
@@ -166,9 +169,9 @@ type MarkdownFile struct {
 }
 
 func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
-	fc, err := ioutil.ReadFile(md.Path)
+	fc, err := ioutil.ReadFile(md.FilePath)
 	if err != nil {
-		log.Printf("Couldn't load file %v", md.Path)
+		log.Printf("Couldn't load file %v", md.FilePath)
 	}
 
 	html := string(markdown.ToHTML(fc, nil, nil))
@@ -177,6 +180,23 @@ func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
 		Title: md.Title,
 		Body:  template.HTML(html),
 	})
+}
+
+func (md MarkdownFile) GetTitle() string {
+	return md.Title
+}
+
+func (md MarkdownFile) GetText() string {
+	fc, err := ioutil.ReadFile(md.FilePath)
+	if err != nil {
+		log.Printf(err.Error())
+	}
+
+	return string(fc)
+}
+
+func (md MarkdownFile) GetPath() string {
+	return md.FilePath
 }
 
 type Content struct {
@@ -191,7 +211,7 @@ func justFilename(path string) string {
 }
 
 func (mdf MarkdownFile) readFile() []byte {
-	input, err := ioutil.ReadFile(mdf.Path)
+	input, err := ioutil.ReadFile(mdf.FilePath)
 	if err != nil {
 		return nil
 	}
