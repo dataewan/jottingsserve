@@ -32,9 +32,9 @@ func footer() string {
 
 func indexTemplate() *template.Template {
 	definition := `
-	{{range .Pages}}
+	{{range $key, $file := . }}
 	<ul>
-		<a href={{.Path}}>{{.Filename}}</a>
+		<a href={{$file.Path}}>{{$file.Filename}}</a>
 	</ul>
 	{{end}}
 	`

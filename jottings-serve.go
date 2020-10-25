@@ -4,21 +4,31 @@ package main
 
 import (
 	"flag"
-	_ "github.com/dataewan/jottingsserve/statik"
-	"github.com/gomarkdown/markdown"
-	"github.com/pkg/browser"
-	"github.com/rakyll/statik/fs"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
+
+	_ "github.com/dataewan/jottingsserve/statik"
+	"github.com/gomarkdown/markdown"
+	"github.com/pkg/browser"
+	"github.com/rakyll/statik/fs"
 )
 
-var Directory = "."
+type Server interface {
+	Serve()
+}
 
-const INDEXPAGE = "INDEX"
-const OTHERPAGE = "OTHER"
+type FileIndex interface {
+	Get(string) File
+}
+
+type File interface {
+	ToHTML(http.ResponseWriter)
+}
+
+var Directory = "."
 
 func main() {
 	port := flag.String("port", "8080", "Port to serve pages on")
@@ -35,19 +45,97 @@ func main() {
 		log.Fatal(err)
 	}
 
+	mdfi := NewMarkdownIndex(Directory)
+	mdfi.ReadFiles()
+	s := HTTPServer{
+		Index: mdfi,
+	}
+
 	go browser.OpenURL("http://localhost" + portstring)
 	http.Handle("/public/", http.StripPrefix("/public/", http.FileServer(statikFS)))
-	http.HandleFunc("/", serve)
+	http.HandleFunc("/", s.Serve)
 	log.Fatal(http.ListenAndServe(portstring, nil))
 }
 
-type PagePointer struct {
-	Path     string
-	Filename string
+type HTTPServer struct {
+	Index MarkdownFileIndex
 }
 
-type Pages struct {
-	Pages []PagePointer
+type MarkdownFileIndex struct {
+	Files           map[string]MarkdownFile
+	Directory       string
+	ContentTemplate *template.Template
+	IndexTemplate   *template.Template
+}
+
+func NewMarkdownIndex(dir string) MarkdownFileIndex {
+	files := make(map[string]MarkdownFile)
+	mdfi := MarkdownFileIndex{
+		Files:           files,
+		Directory:       dir,
+		ContentTemplate: contentTemplate(),
+		IndexTemplate:   indexTemplate(),
+	}
+
+	return mdfi
+}
+
+func (mdfi *MarkdownFileIndex) ReadFiles() {
+	matches, err := filepath.Glob(mdfi.Directory + "/*md")
+	if err != nil {
+		log.Print(err)
+	}
+
+	for _, path := range matches {
+		filename := justFilename(path)
+		mdfile := ReadMarkdown(path, mdfi.ContentTemplate)
+		mdfi.Files[filename] = mdfile
+	}
+}
+
+func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
+	lookup := justFilename(url)
+	value, exists := mdfi.Files[lookup]
+	if exists {
+		return value, true
+	}
+	return MarkdownFile{}, false
+}
+
+func (mdfi *MarkdownFileIndex) ServeIndex(w http.ResponseWriter) {
+	template := mdfi.IndexTemplate
+	template.Execute(w, mdfi.Files)
+}
+
+func ReadMarkdown(path string, template *template.Template) MarkdownFile {
+	filename := justFilename(path)
+	return MarkdownFile{
+		Path:     path,
+		Filename: filename,
+		Title:    filename,
+		Template: template,
+	}
+}
+
+type MarkdownFile struct {
+	Path     string
+	Filename string
+	Title    string
+	Template *template.Template
+}
+
+func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
+	fc, err := ioutil.ReadFile(md.Path)
+	if err != nil {
+		log.Printf("Couldn't load file %v", md.Path)
+	}
+
+	html := string(markdown.ToHTML(fc, nil, nil))
+
+	md.Template.Execute(w, Content{
+		Title: md.Title,
+		Body:  template.HTML(html),
+	})
 }
 
 type Content struct {
@@ -61,26 +149,10 @@ func justFilename(path string) string {
 	return basepath[0 : len(basepath)-len(ext)]
 }
 
-func getFiles() Pages {
-	matches, err := filepath.Glob(Directory + "/*md")
+func (mdf MarkdownFile) readFile() []byte {
+	input, err := ioutil.ReadFile(mdf.Path)
 	if err != nil {
-		log.Print(err.Error())
-	}
-
-	var output []PagePointer
-
-	for _, match := range matches {
-		filename := justFilename(match)
-		output = append(output, PagePointer{Path: match, Filename: filename})
-	}
-
-	return Pages{Pages: output}
-}
-
-func readFile(page PagePointer) []byte {
-	input, err := ioutil.ReadFile(page.Path)
-	if err != nil {
-		log.Print(err.Error())
+		return nil
 	}
 	return input
 }
@@ -90,78 +162,17 @@ func markdownToHTML(input []byte) []byte {
 	return html
 }
 
-func checkResponseType(url string) string {
-	if url == "/" {
-		return INDEXPAGE
-	} else if url[len(url)-3:] == ".md" {
-		return OTHERPAGE
-	}
-	return ""
+func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
+	input := mdf.readFile()
+	html := string(markdownToHTML(input))
+	mdf.Template.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
 }
 
-func fileIsIndex(file PagePointer) bool {
-	if file.Filename == "README" {
-		return true
-	}
-	return false
-}
-
-func checkIndexExists() (bool, PagePointer) {
-	for _, file := range getFiles().Pages {
-		if fileIsIndex(file) {
-			return true, file
-		}
-	}
-	return false, PagePointer{}
-}
-
-func indexPage(w http.ResponseWriter, r *http.Request) {
-	exists, page := checkIndexExists()
+func (s *HTTPServer) Serve(w http.ResponseWriter, r *http.Request) {
+	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
-		writePage(w, page)
+		file.ToHTML(w)
 	} else {
-		markdownfiles := getFiles()
-		tmpl := indexTemplate()
-		tmpl.Execute(w, markdownfiles)
-	}
-}
-
-func writePage(w http.ResponseWriter, p PagePointer) {
-	input := readFile(p)
-	html := markdownToHTML(input)
-	tmpl := contentTemplate()
-	tmpl.Execute(w, Content{Title: p.Filename, Body: template.HTML(string(html))})
-}
-
-func otherpage(w http.ResponseWriter, url string, r *http.Request) {
-	markdownfiles := getFiles()
-
-	var markdownfile PagePointer
-	found := false
-
-	trimmedURL := justFilename(url)
-	for _, file := range markdownfiles.Pages {
-		if file.Filename == trimmedURL {
-			markdownfile = file
-			found = true
-		}
-	}
-
-	writePage(w, markdownfile)
-	if !found {
-		http.NotFound(w, r)
-	}
-}
-
-func serve(w http.ResponseWriter, r *http.Request) {
-	responseType := checkResponseType(r.URL.Path)
-	h := http.FileServer(http.Dir(Directory))
-	if responseType == INDEXPAGE {
-		indexPage(w, r)
-	} else if responseType == OTHERPAGE {
-		otherpage(w, r.URL.Path, r)
-	} else {
-		h.ServeHTTP(w, r)
-		return
+		s.Index.ServeIndex(w)
 	}
 }
