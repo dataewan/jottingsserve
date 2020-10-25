@@ -3,11 +3,15 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	_ "github.com/dataewan/jottingsserve/statik"
@@ -46,7 +50,6 @@ func main() {
 	}
 
 	mdfi := NewMarkdownIndex(Directory)
-	mdfi.ReadFiles()
 	s := HTTPServer{
 		Index: mdfi,
 	}
@@ -80,17 +83,36 @@ func NewMarkdownIndex(dir string) MarkdownFileIndex {
 	return mdfi
 }
 
-func (mdfi *MarkdownFileIndex) ReadFiles() {
+func (mdfi *MarkdownFileIndex) ReadFiles() bool {
 	matches, err := filepath.Glob(mdfi.Directory + "/*md")
 	if err != nil {
 		log.Print(err)
 	}
 
+	// Have any of the files been updated?
+	indexDirty := false
+
 	for _, path := range matches {
 		filename := justFilename(path)
+		oldfile, exists := mdfi.Files[filename]
 		mdfile := ReadMarkdown(path, mdfi.ContentTemplate)
-		mdfi.Files[filename] = mdfile
+		if exists {
+			if oldfile.Checksum != mdfile.Checksum {
+				indexDirty = true
+			}
+			mdfi.Files[filename] = mdfile
+		} else {
+			mdfi.Files[filename] = mdfile
+			indexDirty = true
+		}
 	}
+	return indexDirty
+}
+
+func (mdfi *MarkdownFileIndex) Update() {
+	indexDirty := mdfi.ReadFiles()
+	log.Printf("Do I need to refresh index? %v", indexDirty)
+
 }
 
 func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
@@ -109,12 +131,30 @@ func (mdfi *MarkdownFileIndex) ServeIndex(w http.ResponseWriter) {
 
 func ReadMarkdown(path string, template *template.Template) MarkdownFile {
 	filename := justFilename(path)
+	checksum, _ := md5sum(path)
 	return MarkdownFile{
 		Path:     path,
 		Filename: filename,
 		Title:    filename,
 		Template: template,
+		Checksum: checksum,
 	}
+}
+
+func md5sum(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	result := hex.EncodeToString(hash.Sum(nil))
+	return result, nil
 }
 
 type MarkdownFile struct {
@@ -122,6 +162,7 @@ type MarkdownFile struct {
 	Filename string
 	Title    string
 	Template *template.Template
+	Checksum string
 }
 
 func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
@@ -169,6 +210,7 @@ func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
 }
 
 func (s *HTTPServer) Serve(w http.ResponseWriter, r *http.Request) {
+	s.Index.Update()
 	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
 		file.ToHTML(w)
