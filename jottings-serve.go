@@ -74,19 +74,15 @@ type HTTPServer struct {
 }
 
 type MarkdownFileIndex struct {
-	Files           map[string]MarkdownFile
-	Directory       string
-	ContentTemplate *template.Template
-	IndexTemplate   *template.Template
+	Files     map[string]MarkdownFile
+	Directory string
 }
 
 func NewMarkdownIndex(dir string) MarkdownFileIndex {
 	files := make(map[string]MarkdownFile)
 	mdfi := MarkdownFileIndex{
-		Files:           files,
-		Directory:       dir,
-		ContentTemplate: contentTemplate(),
-		IndexTemplate:   indexTemplate(),
+		Files:     files,
+		Directory: dir,
 	}
 
 	return mdfi
@@ -100,7 +96,7 @@ func (mdfi *MarkdownFileIndex) ReadFiles() {
 
 	for _, path := range matches {
 		filename := justFilename(path)
-		mdfile := ReadMarkdown(path, mdfi.ContentTemplate)
+		mdfile := ReadMarkdown(path)
 		mdfi.Files[filename] = mdfile
 	}
 }
@@ -115,17 +111,16 @@ func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
 }
 
 func (mdfi *MarkdownFileIndex) ServeIndex(w http.ResponseWriter) {
-	template := mdfi.IndexTemplate
+	template := indexTemplate()
 	template.Execute(w, mdfi.Files)
 }
 
-func ReadMarkdown(path string, template *template.Template) MarkdownFile {
+func ReadMarkdown(path string) MarkdownFile {
 	filename := justFilename(path)
 	return MarkdownFile{
 		Path:     path,
 		Filename: filename,
 		Title:    filename,
-		Template: template,
 	}
 }
 
@@ -133,7 +128,6 @@ type MarkdownFile struct {
 	Path     string
 	Filename string
 	Title    string
-	Template *template.Template
 }
 
 func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
@@ -144,7 +138,8 @@ func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
 
 	html := string(markdown.ToHTML(fc, nil, nil))
 
-	md.Template.Execute(w, Content{
+	t := contentTemplate()
+	t.Execute(w, Content{
 		Title: md.Title,
 		Body:  template.HTML(html),
 	})
@@ -177,7 +172,8 @@ func markdownToHTML(input []byte) []byte {
 func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
 	input := mdf.readFile()
 	html := string(markdownToHTML(input))
-	mdf.Template.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
+	t := contentTemplate()
+	t.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
 }
 
 func (s *HTTPServer) MarkdownFileHandler(w http.ResponseWriter, r *http.Request) {
