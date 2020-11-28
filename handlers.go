@@ -36,20 +36,13 @@ func (s *HTTPServer) ApiFileList(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) ApiFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	title := vars["title"]
+	file, exists := s.Index.Get(title)
 
-	var f MarkdownFile
-
-	for _, file := range s.Index.Files {
-		if file.Title == title {
-			f = file
-		}
-	}
-
-	if f == (MarkdownFile{}) {
+	if !exists {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
-	writeJsonResponse(f, w, r)
+	writeJsonResponse(file, w, r)
 
 }
