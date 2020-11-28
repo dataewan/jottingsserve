@@ -48,7 +48,8 @@ func main() {
 	mdfi := NewMarkdownIndex(Directory)
 	mdfi.ReadFiles()
 	s := HTTPServer{
-		Index: mdfi,
+		Index:      mdfi,
+		FileServer: http.FileServer(http.Dir(Directory)),
 	}
 
 	go browser.OpenURL("http://localhost" + portstring)
@@ -58,7 +59,8 @@ func main() {
 }
 
 type HTTPServer struct {
-	Index MarkdownFileIndex
+	Index      MarkdownFileIndex
+	FileServer http.Handler
 }
 
 type MarkdownFileIndex struct {
@@ -168,11 +170,17 @@ func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
 	mdf.Template.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
 }
 
+func IsIndexURL(url string) bool {
+	return url == "/"
+}
+
 func (s *HTTPServer) Serve(w http.ResponseWriter, r *http.Request) {
 	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
 		file.ToHTML(w)
-	} else {
+	} else if IsIndexURL(r.URL.String()) {
 		s.Index.ServeIndex(w)
+	} else {
+		s.FileServer.ServeHTTP(w, r)
 	}
 }
