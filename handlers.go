@@ -2,11 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
+
+func (s *HTTPServer) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	template := indexTemplate()
+	template.Execute(w, s.Index.Files)
+}
+
+func (s *HTTPServer) MarkdownFileHandler(w http.ResponseWriter, r *http.Request) {
+	file, exists := s.Index.Get(r.URL.Path)
+	if exists {
+		file.ToHTML(w)
+	}
+}
 
 func writeJsonResponse(rawdata interface{}, w http.ResponseWriter, r *http.Request) {
 	data, err := json.Marshal(rawdata)

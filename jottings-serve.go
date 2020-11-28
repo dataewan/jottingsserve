@@ -4,15 +4,19 @@ package main
 
 import (
 	"flag"
-	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 
-	"github.com/gomarkdown/markdown"
 	"github.com/pkg/browser"
 )
+
+type Server interface {
+	Serve()
+}
+
+type File interface {
+	ToHTML(http.ResponseWriter)
+}
 
 var Directory = "."
 
@@ -29,118 +33,4 @@ func main() {
 	srv := NewServer(portstring, Directory)
 	go browser.OpenURL("http://localhost:" + portstring)
 	log.Fatal(srv.Server.ListenAndServe())
-}
-
-type MarkdownFileIndex struct {
-	Files     map[string]MarkdownFile `json:"files"`
-	Directory string                  `json:"directory"`
-}
-
-func NewMarkdownIndex(dir string) MarkdownFileIndex {
-	files := make(map[string]MarkdownFile)
-	mdfi := MarkdownFileIndex{
-		Files:     files,
-		Directory: dir,
-	}
-
-	return mdfi
-}
-
-func (mdfi *MarkdownFileIndex) ReadFiles() {
-	matches, err := filepath.Glob(mdfi.Directory + "/*md")
-	if err != nil {
-		log.Print(err)
-	}
-
-	for _, path := range matches {
-		filename := justFilename(path)
-		mdfile := ReadMarkdown(path)
-		mdfi.Files[filename] = mdfile
-	}
-}
-
-func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
-	lookup := justFilename(url)
-	value, exists := mdfi.Files[lookup]
-	if exists {
-		return value, true
-	}
-	return MarkdownFile{}, false
-}
-
-func (mdfi *MarkdownFileIndex) ServeIndex(w http.ResponseWriter) {
-	template := indexTemplate()
-	template.Execute(w, mdfi.Files)
-}
-
-func ReadMarkdown(path string) MarkdownFile {
-	filename := justFilename(path)
-	return MarkdownFile{
-		Path:     path,
-		Filename: filename,
-		Title:    filename,
-	}
-}
-
-type MarkdownFile struct {
-	Path     string `json:"path"`
-	Filename string `json:"filename"`
-	Title    string `json:"title"`
-}
-
-func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
-	fc, err := ioutil.ReadFile(md.Path)
-	if err != nil {
-		log.Printf("Couldn't load file %v", md.Path)
-	}
-
-	html := string(markdown.ToHTML(fc, nil, nil))
-
-	t := contentTemplate()
-	t.Execute(w, Content{
-		Title: md.Title,
-		Body:  template.HTML(html),
-	})
-}
-
-type Content struct {
-	Title string
-	Body  template.HTML
-}
-
-func justFilename(path string) string {
-	basepath := filepath.Base(path)
-	ext := filepath.Ext(basepath)
-	return basepath[0 : len(basepath)-len(ext)]
-}
-
-func (mdf MarkdownFile) readFile() []byte {
-	input, err := ioutil.ReadFile(mdf.Path)
-	if err != nil {
-		return nil
-	}
-	return input
-}
-
-func markdownToHTML(input []byte) []byte {
-	html := markdown.ToHTML(input, nil, nil)
-	return html
-}
-
-func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
-	input := mdf.readFile()
-	html := string(markdownToHTML(input))
-	t := contentTemplate()
-	t.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
-}
-
-func (s *HTTPServer) MarkdownFileHandler(w http.ResponseWriter, r *http.Request) {
-	file, exists := s.Index.Get(r.URL.Path)
-	if exists {
-		file.ToHTML(w)
-	}
-}
-
-func (s *HTTPServer) HomeHandler(w http.ResponseWriter, r *http.Request) {
-	s.Index.ServeIndex(w)
 }
