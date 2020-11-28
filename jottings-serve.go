@@ -10,24 +10,9 @@ import (
 	"net/http"
 	"path/filepath"
 
-	_ "github.com/dataewan/jottingsserve/statik"
 	"github.com/gomarkdown/markdown"
-	"github.com/gorilla/mux"
 	"github.com/pkg/browser"
-	"github.com/rakyll/statik/fs"
 )
-
-type Server interface {
-	Serve()
-}
-
-type FileIndex interface {
-	Get(string) File
-}
-
-type File interface {
-	ToHTML(http.ResponseWriter)
-}
 
 var Directory = "."
 
@@ -35,47 +20,20 @@ func main() {
 	port := flag.String("port", "8080", "Port to serve pages on")
 	flag.Parse()
 
-	portstring := ":" + *port
+	portstring := *port
 
 	if flag.NArg() == 1 {
 		Directory = flag.Arg(0)
 	}
 
-	statikFS, err := fs.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mdfi := NewMarkdownIndex(Directory)
-	mdfi.ReadFiles()
-	s := HTTPServer{
-		Index:      mdfi,
-		FileServer: http.FileServer(http.Dir(Directory)),
-	}
-
-	r := mux.NewRouter().StrictSlash(true)
-
-	go browser.OpenURL("http://localhost" + portstring)
-	r.Handle("/public/", http.StripPrefix("/public/", http.FileServer(statikFS)))
-	r.HandleFunc("/", s.HomeHandler)
-	r.HandleFunc("/{path}", s.MarkdownFileHandler)
-
-	srv := &http.Server{
-		Handler: r,
-		Addr:    "127.0.0.1" + portstring,
-	}
-
-	log.Fatal(srv.ListenAndServe())
-}
-
-type HTTPServer struct {
-	Index      MarkdownFileIndex
-	FileServer http.Handler
+	srv := NewServer(portstring, Directory)
+	go browser.OpenURL("http://localhost:" + portstring)
+	log.Fatal(srv.Server.ListenAndServe())
 }
 
 type MarkdownFileIndex struct {
-	Files     map[string]MarkdownFile
-	Directory string
+	Files     map[string]MarkdownFile `json:"files"`
+	Directory string                  `json:"directory"`
 }
 
 func NewMarkdownIndex(dir string) MarkdownFileIndex {
@@ -125,9 +83,9 @@ func ReadMarkdown(path string) MarkdownFile {
 }
 
 type MarkdownFile struct {
-	Path     string
-	Filename string
-	Title    string
+	Path     string `json:"path"`
+	Filename string `json:"filename"`
+	Title    string `json:"title"`
 }
 
 func (md MarkdownFile) ToHTML(w http.ResponseWriter) {
