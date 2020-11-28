@@ -48,6 +48,7 @@ func (s *HTTPServer) addRoutes() {
 	s.Router.HandleFunc("/", s.HomeHandler)
 	s.Router.HandleFunc("/{path}", s.MarkdownFileHandler)
 	s.Router.HandleFunc("/api/files", s.ApiFileList)
-	s.Router.HandleFunc("/api/files/{title}", s.ApiFile)
+	s.Router.HandleFunc("/api/files/{title}", s.ApiGetFile).Methods("GET")
+	s.Router.HandleFunc("/api/files/{title}", s.ApiWriteFile).Methods("POST")
 
 }

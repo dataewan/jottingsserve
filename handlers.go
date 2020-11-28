@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func (s *HTTPServer) HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +35,7 @@ func (s *HTTPServer) ApiFileList(w http.ResponseWriter, r *http.Request) {
 	writeJsonResponse(s.Index.Files, w, r)
 }
 
-func (s *HTTPServer) ApiFile(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) ApiGetFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	title := vars["title"]
 	file, exists := s.Index.Get(title)
@@ -45,4 +47,15 @@ func (s *HTTPServer) ApiFile(w http.ResponseWriter, r *http.Request) {
 
 	writeJsonResponse(file, w, r)
 
+}
+
+func (s *HTTPServer) ApiWriteFile(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	title := vars["title"]
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Print(err)
+	}
+
+	s.writefile(title, body)
 }

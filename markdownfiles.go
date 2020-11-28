@@ -1,11 +1,13 @@
 package main
 
 import (
-	"github.com/gomarkdown/markdown"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
+
+	"github.com/gomarkdown/markdown"
 )
 
 type MarkdownFile struct {
@@ -41,6 +43,15 @@ func (mdf MarkdownFile) readFile() []byte {
 	}
 	return input
 }
+
+func (s *HTTPServer) writefile(title string, body []byte) {
+	path := filepath.Join(s.Index.Directory, title+".md")
+	err := ioutil.WriteFile(path, body, 0644)
+	if err != nil {
+		log.Print(err)
+	}
+}
+
 func ReadMarkdown(path string) MarkdownFile {
 	filename := justFilename(path)
 	return MarkdownFile{
