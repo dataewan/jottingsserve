@@ -21,7 +21,7 @@ func NewServer(port string, directory string) *HTTPServer {
 	router := mux.NewRouter()
 	s := &HTTPServer{
 		Index:      mdfi,
-		FileServer: http.FileServer(http.Dir(Directory)),
+		FileServer: http.FileServer(http.Dir(directory)),
 		Router:     router,
 		Server: &http.Server{
 			Handler: router,
