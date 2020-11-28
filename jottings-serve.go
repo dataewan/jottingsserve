@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/dataewan/jottingsserve/statik"
 	"github.com/gomarkdown/markdown"
+	"github.com/gorilla/mux"
 	"github.com/pkg/browser"
 	"github.com/rakyll/statik/fs"
 )
@@ -52,10 +53,19 @@ func main() {
 		FileServer: http.FileServer(http.Dir(Directory)),
 	}
 
+	r := mux.NewRouter().StrictSlash(true)
+
 	go browser.OpenURL("http://localhost" + portstring)
-	http.Handle("/public/", http.StripPrefix("/public/", http.FileServer(statikFS)))
-	http.HandleFunc("/", s.Serve)
-	log.Fatal(http.ListenAndServe(portstring, nil))
+	r.Handle("/public/", http.StripPrefix("/public/", http.FileServer(statikFS)))
+	r.HandleFunc("/", s.HomeHandler)
+	r.HandleFunc("/{path}", s.MarkdownFileHandler)
+
+	srv := &http.Server{
+		Handler: r,
+		Addr:    "127.0.0.1" + portstring,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
 
 type HTTPServer struct {
@@ -170,17 +180,13 @@ func (mdf MarkdownFile) writePage(w http.ResponseWriter) {
 	mdf.Template.Execute(w, Content{Title: mdf.Filename, Body: template.HTML(html)})
 }
 
-func IsIndexURL(url string) bool {
-	return url == "/"
-}
-
-func (s *HTTPServer) Serve(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) MarkdownFileHandler(w http.ResponseWriter, r *http.Request) {
 	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
 		file.ToHTML(w)
-	} else if IsIndexURL(r.URL.String()) {
-		s.Index.ServeIndex(w)
-	} else {
-		s.FileServer.ServeHTTP(w, r)
 	}
+}
+
+func (s *HTTPServer) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	s.Index.ServeIndex(w)
 }
