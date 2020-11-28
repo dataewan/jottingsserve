@@ -34,7 +34,7 @@ func indexTemplate() *template.Template {
 	definition := `
 	{{range $key, $file := . }}
 	<ul>
-		<a href={{$file.Path}}>{{$file.Filename}}</a>
+		<a href={{$file.Filename}}>{{$file.Filename}}</a>
 	</ul>
 	{{end}}
 	`
