@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	_ "github.com/pkg/browser"
+	"github.com/pkg/browser"
 )
 
 type Server interface {
@@ -20,6 +20,7 @@ type File interface {
 
 func main() {
 	port := flag.String("port", "8080", "Port to serve pages on")
+	nobrowser := flag.Bool("nobrowser", false, "If set, disable opening the browser window")
 	flag.Parse()
 
 	portstring := *port
@@ -31,6 +32,8 @@ func main() {
 	}
 
 	srv := NewServer(portstring, directory)
-	//go browser.OpenURL("http://localhost:" + portstring)
+	if !*nobrowser {
+		go browser.OpenURL("http://localhost:" + portstring)
+	}
 	log.Fatal(srv.Server.ListenAndServe())
 }
