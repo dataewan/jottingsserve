@@ -139,31 +139,36 @@ func splitSections(contents string) []string {
 	return sections
 }
 
+func parseSection(contents string) Section {
+	var headingName string
+	parser := newParser()
+	tree := markdown.Parse([]byte(contents), parser)
+	html := singleNodeAsHTML(tree)
+
+	for _, node := range tree.GetChildren() {
+		if heading, ok := node.(*ast.Heading); ok {
+			headingName = (nodeChildText(heading))
+		}
+	}
+
+	return Section{
+		SectionName: headingName,
+		SectionHTML: html,
+		SectionRaw:  contents,
+	}
+}
+
 func ParseFileContents(title string, contents []byte) FileContents {
 	fc := FileContents{
 		Title: title,
 	}
 
 	sections := splitSections(string(contents))
-	fmt.Println(sections)
 
-	sec := Section{
-		SectionName: "main",
-	}
-	parser := newParser()
-	tree := markdown.Parse(contents, parser)
-
-	for _, node := range tree.GetChildren() {
-		if heading, ok := node.(*ast.Heading); ok {
-			headingName := (nodeChildText(heading))
-			fc.Sections = append(fc.Sections, sec)
-			sec = Section{SectionName: headingName}
-		}
-		sec.SectionHTML += singleNodeAsHTML(node)
-		sec.SectionRaw += singleNodeRawContents(node)
+	for _, section := range sections {
+		fc.Sections = append(fc.Sections, parseSection(section))
 	}
 
-	fc.Sections = append(fc.Sections, sec)
 	return fc
 }
 
