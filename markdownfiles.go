@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
@@ -31,8 +34,9 @@ type FileContents struct {
 }
 
 type Section struct {
-	SectionName     string `json:"sectionname"`
-	SectionContents string `json:"sectioncontents"`
+	SectionName string `json:"sectionname"`
+	SectionHTML string `json:"sectionhtml"`
+	SectionRaw  string `json:"sectionraw"`
 }
 
 func newParser() *parser.Parser {
@@ -93,9 +97,15 @@ func ReadMarkdown(path string) MarkdownFile {
 	}
 }
 
-func singleNodeRender(node ast.Node) string {
+func singleNodeAsHTML(node ast.Node) string {
 	renderer := newNodeRenderer()
 	return string(markdown.Render(node, renderer))
+}
+
+func singleNodeRawContents(node ast.Node) string {
+	fmt.Printf("%+v\n", node)
+	str := ""
+	return str
 }
 
 func nodeChildText(node ast.Node) string {
@@ -108,16 +118,38 @@ func nodeChildText(node ast.Node) string {
 	return val
 }
 
-func (mdf MarkdownFile) GetFileContents() FileContents {
-	fc := FileContents{
-		Title: mdf.Title,
+func splitSections(contents string) []string {
+	var sections []string
+	section := ""
+	re := regexp.MustCompile("^#+")
+
+	sc := bufio.NewScanner(strings.NewReader(contents))
+
+	for sc.Scan() {
+		line := sc.Text()
+		if re.MatchString(line) {
+			sections = append(sections, section)
+			section = ""
+		}
+		section = section + line + "\n"
 	}
+
+	sections = append(sections, section)
+
+	return sections
+}
+
+func ParseFileContents(title string, contents []byte) FileContents {
+	fc := FileContents{
+		Title: title,
+	}
+
+	sections := splitSections(string(contents))
+	fmt.Println(sections)
 
 	sec := Section{
 		SectionName: "main",
 	}
-
-	contents := mdf.readFile()
 	parser := newParser()
 	tree := markdown.Parse(contents, parser)
 
@@ -127,9 +159,15 @@ func (mdf MarkdownFile) GetFileContents() FileContents {
 			fc.Sections = append(fc.Sections, sec)
 			sec = Section{SectionName: headingName}
 		}
-		sec.SectionContents += singleNodeRender(node)
+		sec.SectionHTML += singleNodeAsHTML(node)
+		sec.SectionRaw += singleNodeRawContents(node)
 	}
 
 	fc.Sections = append(fc.Sections, sec)
 	return fc
+}
+
+func (mdf MarkdownFile) GetFileContents() FileContents {
+	contents := mdf.readFile()
+	return ParseFileContents(mdf.Title, contents)
 }
