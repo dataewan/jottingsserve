@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "github.com/dataewan/jottingsserve/statik"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"log"
@@ -19,6 +20,14 @@ func NewServer(port string, directory string) *HTTPServer {
 	mdfi := NewMarkdownIndex(directory)
 	mdfi.ReadFiles()
 	router := mux.NewRouter()
+
+	cors := handlers.CORS(
+		handlers.AllowedHeaders([]string{"content-type"}),
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowCredentials(),
+	)
+	router.Use(cors)
+
 	s := &HTTPServer{
 		Index:      mdfi,
 		FileServer: http.FileServer(http.Dir(directory)),
