@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pkg/browser"
+	_ "github.com/pkg/browser"
 )
 
 type Server interface {
@@ -31,6 +31,6 @@ func main() {
 	}
 
 	srv := NewServer(portstring, directory)
-	go browser.OpenURL("http://localhost:" + portstring)
+	//go browser.OpenURL("http://localhost:" + portstring)
 	log.Fatal(srv.Server.ListenAndServe())
 }

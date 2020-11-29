@@ -59,3 +59,16 @@ func (s *HTTPServer) ApiWriteFile(w http.ResponseWriter, r *http.Request) {
 
 	s.writefile(title, body)
 }
+
+func (s *HTTPServer) ApiGetFileSections(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	title := vars["title"]
+	mdfile, exists := s.Index.Get(title)
+	if !exists {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	fileContents := mdfile.GetFileContents()
+	writeJsonResponse(fileContents, w, r)
+}

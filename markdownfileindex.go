@@ -36,7 +36,7 @@ func (mdfi *MarkdownFileIndex) ReadFiles() {
 	}
 }
 
-func (mdfi *MarkdownFileIndex) Get(url string) (File, bool) {
+func (mdfi *MarkdownFileIndex) Get(url string) (MarkdownFile, bool) {
 	lookup := justFilename(url)
 	value, exists := mdfi.Files[lookup]
 	if exists {
