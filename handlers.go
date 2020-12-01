@@ -18,6 +18,8 @@ func (s *HTTPServer) MarkdownFileHandler(w http.ResponseWriter, r *http.Request)
 	file, exists := s.Index.Get(r.URL.Path)
 	if exists {
 		file.ToHTML(w)
+	} else {
+		s.FileServer.ServeHTTP(w, r)
 	}
 }
 
