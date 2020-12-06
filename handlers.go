@@ -10,6 +10,7 @@ import (
 )
 
 func (s *HTTPServer) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	s.Index.ReadFiles()
 	template := indexTemplate()
 	template.Execute(w, s.Index.Files)
 }
