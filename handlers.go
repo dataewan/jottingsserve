@@ -35,6 +35,7 @@ func writeJsonResponse(rawdata interface{}, w http.ResponseWriter, r *http.Reque
 }
 
 func (s *HTTPServer) ApiFileList(w http.ResponseWriter, r *http.Request) {
+	s.Index.ReadFiles()
 	writeJsonResponse(s.Index.Files, w, r)
 }
 
