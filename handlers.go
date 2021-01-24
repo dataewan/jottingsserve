@@ -76,3 +76,22 @@ func (s *HTTPServer) ApiGetFileSections(w http.ResponseWriter, r *http.Request) 
 	fileContents := mdfile.GetFileContents()
 	writeJsonResponse(fileContents, w, r)
 }
+
+type LinksFromFile struct {
+	Title string         `json:"title"`
+	Links []MarkdownLink `json:"links"`
+}
+
+func (s *HTTPServer) ApiGetAllLinks(w http.ResponseWriter, r *http.Request) {
+
+	var allLinks []LinksFromFile
+	for _, f := range s.Index.Files {
+		lff := LinksFromFile{
+			Title: f.Title,
+			Links: f.GetLinks(),
+		}
+		allLinks = append(allLinks, lff)
+	}
+
+	writeJsonResponse(allLinks, w, r)
+}
