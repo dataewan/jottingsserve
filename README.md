@@ -19,11 +19,16 @@ Accessing `localhost:8080` will then display your rendered markdown pages.
 ### Command line options
 
 ```
-Usage of jottingsserve:
-  -nobrowser
-        If set, disable opening the browser window
-  -port string
-        Port to serve pages on (default "8080")
+USAGE:
+   jottingsserve [global options] command [command options] [arguments...]
+
+COMMANDS:
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --port value, -p value       (default: "8080")
+   --directory value, -d value  (default: ".")
+   --help, -h                   show help (default: false)
 ```
 
 

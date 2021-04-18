@@ -9,4 +9,5 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.7.0
+	github.com/urfave/cli/v2 v2.3.0
 )
