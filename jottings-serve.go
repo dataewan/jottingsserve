@@ -42,6 +42,17 @@ func main() {
 			log.Fatal(srv.Server.ListenAndServe())
 			return nil
 		},
+		Commands: []*cli.Command{
+			{
+				Name: "checklinks",
+				Action: func(c *cli.Context) error {
+					mdfi := NewMarkdownIndex(c.String("directory"))
+					mdfi.ReadFiles()
+					mdfi.CheckBrokenLinks()
+					return nil
+				},
+			},
+		},
 	}
 
 	err := app.Run(os.Args)

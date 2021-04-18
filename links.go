@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
-	"strings"
 )
 
 type linkVisitor struct {
@@ -96,4 +98,48 @@ func (mdfi MarkdownFileIndex) GetAllLinks() []LinksFromFile {
 		allLinks = append(allLinks, lff)
 	}
 	return allLinks
+}
+
+func filterMarkdownLinks(lff []LinksFromFile) []LinksFromFile {
+	mdlinks := []LinksFromFile{}
+	for _, linksinfile := range lff {
+		links := []MarkdownLink{}
+		for _, link := range linksinfile.Links {
+			if link.LinkType == "Markdown" {
+				links = append(links, link)
+			}
+		}
+		mdlinks = append(mdlinks, LinksFromFile{
+			Title: linksinfile.Title,
+			Links: links,
+		})
+	}
+	return mdlinks
+}
+
+func filterBrokenLinks(lff []LinksFromFile, mdfi MarkdownFileIndex) []LinksFromFile {
+	mdlinks := []LinksFromFile{}
+	for _, linksinfile := range lff {
+		links := []MarkdownLink{}
+		for _, link := range linksinfile.Links {
+			if !mdfi.Exists(link.Destination) {
+				links = append(links, link)
+			}
+		}
+		if len(links) > 0 {
+			mdlinks = append(mdlinks, LinksFromFile{
+				Title: linksinfile.Title,
+				Links: links,
+			})
+		}
+	}
+	return mdlinks
+}
+
+func (mdfi MarkdownFileIndex) CheckBrokenLinks() []LinksFromFile {
+	allLinks := mdfi.GetAllLinks()
+	mdLinks := filterMarkdownLinks(allLinks)
+	brokenLinks := filterBrokenLinks(mdLinks, mdfi)
+	fmt.Println(brokenLinks)
+	return brokenLinks
 }
