@@ -80,14 +80,6 @@ func (s *HTTPServer) TitleToPath(title string) string {
 	return path
 }
 
-func (s *HTTPServer) writefile(title string, body []byte) {
-	path := s.TitleToPath(title)
-	err := ioutil.WriteFile(path, body, 0644)
-	if err != nil {
-		log.Print(err)
-	}
-}
-
 func ReadMarkdown(path string) MarkdownFile {
 	filename := justFilename(path)
 	return MarkdownFile{
