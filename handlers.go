@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -51,17 +50,6 @@ func (s *HTTPServer) ApiGetFile(w http.ResponseWriter, r *http.Request) {
 
 	writeJsonResponse(file, w, r)
 
-}
-
-func (s *HTTPServer) ApiWriteFile(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	title := vars["title"]
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Print(err)
-	}
-
-	s.writefile(title, body)
 }
 
 func (s *HTTPServer) ApiGetFileSections(w http.ResponseWriter, r *http.Request) {
