@@ -50,3 +50,9 @@ func justFilename(path string) string {
 	ext := filepath.Ext(basepath)
 	return basepath[0 : len(basepath)-len(ext)]
 }
+
+func (mdfi MarkdownFileIndex) Exists(title string) bool {
+	lookup := justFilename(title)
+	_, exists := mdfi.Files[lookup]
+	return exists
+}

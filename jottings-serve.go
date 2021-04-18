@@ -3,11 +3,11 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/pkg/browser"
+	"github.com/urfave/cli/v2"
 )
 
 type Server interface {
@@ -19,21 +19,47 @@ type File interface {
 }
 
 func main() {
-	port := flag.String("port", "8080", "Port to serve pages on")
-	nobrowser := flag.Bool("nobrowser", false, "If set, disable opening the browser window")
-	flag.Parse()
+	var port string
+	var directory string
 
-	portstring := *port
-
-	var directory = "."
-
-	if flag.NArg() == 1 {
-		directory = flag.Arg(0)
+	app := &cli.App{
+		Name:                 "jottingsserve",
+		EnableBashCompletion: true,
+		Version:              "0.0.1",
+		Description:          "Tools for working with markdown linked notes",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "port",
+				Aliases:     []string{"p"},
+				Destination: &port,
+				Value:       "8080",
+			},
+			&cli.StringFlag{
+				Name:        "directory",
+				Aliases:     []string{"d"},
+				Destination: &directory,
+				Value:       ".",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			srv := NewServer(c.String("port"), c.String("directory"))
+			log.Fatal(srv.Server.ListenAndServe())
+			return nil
+		},
+		Commands: []*cli.Command{
+			{
+				Name: "checklinks",
+				Action: func(c *cli.Context) error {
+					TerminalOutputMissingLinks(c.String("directory"))
+					return nil
+				},
+				Usage: "Check for missing links",
+			},
+		},
 	}
 
-	srv := NewServer(portstring, directory)
-	if !*nobrowser {
-		go browser.OpenURL("http://localhost:" + portstring)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Fatal(srv.Server.ListenAndServe())
 }
