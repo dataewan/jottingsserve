@@ -23,6 +23,10 @@ func main() {
 	var directory string
 
 	app := &cli.App{
+		Name:                 "jottingsserve",
+		EnableBashCompletion: true,
+		Version:              "0.0.1",
+		Description:          "Tools for working with markdown linked notes",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "port",
@@ -46,11 +50,10 @@ func main() {
 			{
 				Name: "checklinks",
 				Action: func(c *cli.Context) error {
-					mdfi := NewMarkdownIndex(c.String("directory"))
-					mdfi.ReadFiles()
-					mdfi.CheckBrokenLinks()
+					TerminalOutputMissingLinks(c.String("directory"))
 					return nil
 				},
+				Usage: "Check for missing links",
 			},
 		},
 	}

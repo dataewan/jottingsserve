@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
@@ -140,6 +139,5 @@ func (mdfi MarkdownFileIndex) CheckBrokenLinks() []LinksFromFile {
 	allLinks := mdfi.GetAllLinks()
 	mdLinks := filterMarkdownLinks(allLinks)
 	brokenLinks := filterBrokenLinks(mdLinks, mdfi)
-	fmt.Println(brokenLinks)
 	return brokenLinks
 }
